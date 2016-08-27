@@ -1,4 +1,4 @@
-# -*- coding: cp1251 -*-
+# -*- coding: utf-8 -*-
 import sys
 
 from PyQt4 import QtCore
@@ -10,27 +10,73 @@ class MainWindow(QtGui.QMainWindow):
     def __init__(self, parent=None):
         super(MainWindow, self).__init__(parent)
         self.resize(1000, 500)
+        self.webHistoryListt = []
         self.windowView()
+        self.menu_bar = self.menuBar()
+        self.menuEngine()
+
+    def menuEngine(self):
+        podmenu1 = self.menu_bar.addMenu("File")
+
+        self.history = self.menu_bar.addMenu("History")
+        self.allHistory = QtGui.QAction("All History", self)
+        self.history.addAction(self.allHistory)
+
+        #self.history.hovered.connect(lambda: self.historyView())
+        podmenu3 = self.menu_bar.addMenu("Help")
+
+        exit = QtGui.QAction('Exit', self)
+        exit.setShortcut('Ctrl+Q')
+        exit.setStatusTip('Exit application')
+        self.connect(exit, QtCore.SIGNAL('triggered()'), QtCore.SLOT('close()'))
+
+        about = QtGui.QAction("About", self)
+        about.setIconVisibleInMenu(True)
+        about.setIcon(QtGui.QIcon("images/WebBro.png"))
+
+        podmenu1.addAction(exit)
+        podmenu3.addAction(about)
+        about.triggered.connect(self.aboutView)
+
+    def historyView(self):
+        print("DDD")
 
     def windowView(self):
         self.progr = QtGui.QProgressBar()
         self.statusBar().addPermanentWidget(self.progr)
         self.progr.setTextVisible(False)
         self.progr.setVisible(False)
-        self.widgett = Tabb(self, "https://www.youtube.com/")  #Central TABWidget on Windows YouTube dont work
+        self.widgett = Tabb(self, "https://google.com")
         self.widgett.setTabsClosable(True)
         self.widgett.setMovable(True)
-        self.setCentralWidget(self.widgett)                    ####### Install Central Widget in MainWindow
-        self.setWindowIcon(QtGui.QIcon("WebBro.png"))
+        self.setCentralWidget(self.widgett)
+        self.setWindowIcon(QtGui.QIcon("images/WebBro.png"))
+
+    def aboutView(self):
+        mod_window = QtGui.QWidget(self, QtCore.Qt.Window)
+        mod_window.setWindowIcon(QtGui.QIcon("images/WebBro.png"))
+        mod_window.setWindowTitle("About NewBrowser")
+        mod_window.setFixedSize(500, 332)
+        horLayout = QtGui.QHBoxLayout(mod_window)
+        localHtmls = QtWebKit.QWebView()
+        localHtmls.page().setLinkDelegationPolicy(QtWebKit.QWebPage.DelegateAllLinks)
+
+        localHtmls.setContextMenuPolicy(QtCore.Qt.NoContextMenu)
+        localHtmls.load(QtCore.QUrl("about.html"))
+        horLayout.addWidget(localHtmls)
+        localHtmls.linkClicked.connect(self.clicks)
+        mod_window.show()
+    def clicks(self, url):
+        self.widgett.addTab(url)
 
 class Tabb(QtGui.QTabWidget):
     def __init__(self, this, url, parent=None):
         super(Tabb, self).__init__(parent)
         self.this = this
-        self.webTabList = []
-        self.addTab(" ", url)
+        self.setIconSize(QtCore.QSize(16, 16))
+        self.addTab(url)
+        # self.addPlusButton()
         self.tabCloseRequested.connect(self.closeTab)
-        #self.addPlusButton()                          # use later
 
     def addPlusButton(self):
         self.tabButton = QtGui.QToolButton(self)
@@ -40,12 +86,10 @@ class Tabb(QtGui.QTabWidget):
         self.tabButton.setFont(font)
         self.setCornerWidget(self.tabButton)
         self.tabButton.clicked.connect(self.addTab)
-        self.tabCloseRequested.connect(self.closeTab)
 
-    def addTab(self, ddd, urll="about:blank"):   #  reimplement addTab()
-        ddd = " "
-        input_tab = QtGui.QWidget()             ## input widget
-        super().addTab(input_tab, ddd)
+    def addTab(self,  urll="about:blank"):
+        input_tab = QtGui.QWidget()
+        super().addTab(input_tab, " ")
 
         contV = QtGui.QVBoxLayout(input_tab)
         contH = QtGui.QHBoxLayout()
@@ -58,6 +102,7 @@ class Tabb(QtGui.QTabWidget):
         button3.setStatusTip('Reload')
         button2.setStatusTip('Back')
         button.setStatusTip('Go')
+
         contH.addWidget(button3)
         contH.addWidget(button2)
         contH.addWidget(button)
@@ -65,6 +110,7 @@ class Tabb(QtGui.QTabWidget):
         contH.addWidget(textLine)
         contH.addWidget(button4)
 
+        # web = WebView()
         web = self.createWeb(urll)
         contV.addWidget(web)
 
@@ -73,6 +119,9 @@ class Tabb(QtGui.QTabWidget):
         indexx = self.indexOf(web.parent())
         self.setCurrentIndex(indexx)
         self.setTabShape(QtGui.QTabWidget.Rounded)
+        self.setTabIcon(indexx, QtGui.QIcon("images/WebBro.png"))
+        self.setStyleSheet('QTabBar::tab { width: 100px; height: 25px; }')
+        self.setElideMode(QtCore.Qt.ElideRight)
 
     def createWeb(self, urll):
         web = WebView(urll)
@@ -104,14 +153,12 @@ class Tabb(QtGui.QTabWidget):
             history.forward()
 
         def titleChangedd(title):
-            icon = web.icon()
-            self.setIconSize(QtCore.QSize(16, 16))
             i = self.indexOf(web.parent())
             self.this.setWindowTitle(title)
             self.setTabText(i, title)
-            self.setTabIcon(i, QtGui.QIcon(icon))
         def linkChanged(link):
             texT.setText(link.toString())
+
         def loadProgress(set):
             self.this.progr.setValue(set)
             self.this.progr.setVisible(True)
@@ -123,12 +170,12 @@ class Tabb(QtGui.QTabWidget):
             tex = self.tabText(ind)
             self.this.setWindowTitle(tex)
 
-        web.titleChanged.connect(lambda title: titleChangedd(title))                         ### 1 type
-        QtCore.QObject.connect(web, QtCore.SIGNAL("linkClicked (const QUrl&)"), linkChanged) ### 2 type
+        web.titleChanged.connect(lambda title: titleChangedd(title))
+        QtCore.QObject.connect(web, QtCore.SIGNAL("linkClicked (const QUrl&)"), linkChanged)
         QtCore.QObject.connect(web, QtCore.SIGNAL("urlChanged (const QUrl&)"), linkChanged)
         QtCore.QObject.connect(web, QtCore.SIGNAL("loadProgress(int)"), loadProgress)
         QtCore.QObject.connect(web, QtCore.SIGNAL("loadFinished(bool)"), loadProgressEnd)
-        but4.clicked.connect(self.addTab)                                                    ### 3 type
+        but4.clicked.connect(lambda : self.addTab())
         web.page().linkHovered.connect(statusChanged)
         QtCore.QObject.connect(but2, QtCore.SIGNAL("clicked()"), back)
         QtCore.QObject.connect(but3, QtCore.SIGNAL("clicked()"), reload)
@@ -140,14 +187,13 @@ class WebView(QtWebKit.QWebView):
     def __init__(self, url, parent=None):
         super(WebView, self).__init__(parent)
         self.load(QtCore.QUrl(url))
-        self.newTabAction = QtGui.QAction('Open in New Tab', self)
+        self.newTabAction = QtGui.QAction('Open Link in New Tab', self)
         self.newTabAction.triggered.connect(self.createNewTab)
 
     def createNewTab(self):
         this = self.parent().parent().parent()
         url = self.newTabAction.data()
-        this.addTab("+", url)
-
+        this.addTab( url)
 
     def contextMenuEvent(self, event):
         menu = self.page().createStandardContextMenu()
