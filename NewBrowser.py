@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import sys
-
+import re
+import urllib.request
 from PyQt4 import QtCore
 from PyQt4 import QtGui
 from PyQt4 import QtWebKit
@@ -10,10 +11,9 @@ class MainWindow(QtGui.QMainWindow):
     def __init__(self, parent=None):
         super(MainWindow, self).__init__(parent)
         self.resize(1000, 500)
-        self.webHistoryListt = []
-        self.windowView()
         self.menu_bar = self.menuBar()
         self.menuEngine()
+        self.windowView()
 
     def menuEngine(self):
         podmenu1 = self.menu_bar.addMenu("File")
@@ -22,7 +22,8 @@ class MainWindow(QtGui.QMainWindow):
         self.allHistory = QtGui.QAction("All History", self)
         self.history.addAction(self.allHistory)
 
-        #self.history.hovered.connect(lambda: self.historyView())
+        self.historyView()
+
         podmenu3 = self.menu_bar.addMenu("Help")
 
         exit = QtGui.QAction('Exit', self)
@@ -39,7 +40,11 @@ class MainWindow(QtGui.QMainWindow):
         about.triggered.connect(self.aboutView)
 
     def historyView(self):
-        print("DDD")
+        self.modHistorWindow = QtGui.QWidget(self, QtCore.Qt.Window)
+        self.modHistorWindow.setWindowIcon(QtGui.QIcon("images/WebBro.png"))
+        self.modHistorWindow.setWindowTitle("History")
+        self.modHistorWindow.resize(500, 300)
+        self.hbox = QtGui.QHBoxLayout(self.modHistorWindow)
 
     def windowView(self):
         self.progr = QtGui.QProgressBar()
@@ -66,6 +71,7 @@ class MainWindow(QtGui.QMainWindow):
         horLayout.addWidget(localHtmls)
         localHtmls.linkClicked.connect(self.clicks)
         mod_window.show()
+
     def clicks(self, url):
         self.widgett.addTab(url)
 
@@ -74,6 +80,7 @@ class Tabb(QtGui.QTabWidget):
         super(Tabb, self).__init__(parent)
         self.this = this
         self.setIconSize(QtCore.QSize(16, 16))
+        self.webHistoryListt = []
         self.addTab(url)
         # self.addPlusButton()
         self.tabCloseRequested.connect(self.closeTab)
@@ -87,7 +94,7 @@ class Tabb(QtGui.QTabWidget):
         self.setCornerWidget(self.tabButton)
         self.tabButton.clicked.connect(self.addTab)
 
-    def addTab(self,  urll="about:blank"):
+    def addTab(self,  urll="start.html"):
         input_tab = QtGui.QWidget()
         super().addTab(input_tab, " ")
 
@@ -119,7 +126,7 @@ class Tabb(QtGui.QTabWidget):
         indexx = self.indexOf(web.parent())
         self.setCurrentIndex(indexx)
         self.setTabShape(QtGui.QTabWidget.Rounded)
-        self.setTabIcon(indexx, QtGui.QIcon("images/WebBro.png"))
+
         self.setStyleSheet('QTabBar::tab { width: 100px; height: 25px; }')
         self.setElideMode(QtCore.Qt.ElideRight)
 
@@ -136,6 +143,7 @@ class Tabb(QtGui.QTabWidget):
 
         def statusChanged(link):
             self.this.statusBar().showMessage(link)
+
         def urlChanged():
             text = texT.text()
             web.setUrl(QtCore.QUrl(text))
@@ -156,12 +164,28 @@ class Tabb(QtGui.QTabWidget):
             i = self.indexOf(web.parent())
             self.this.setWindowTitle(title)
             self.setTabText(i, title)
+
         def linkChanged(link):
-            texT.setText(link.toString())
+            try:
+                texT.setText(link.toString())
+                i = self.indexOf(web.parent())
+                link = link.toString()
+                result = re.split(r'/', link)
+                url = "https://www.google.com/s2/favicons?domain=" + result[2]
+                data = urllib.request.urlopen(url).read()
+                pixmap = QtGui.QPixmap()
+                pixmap.loadFromData(data)
+                icon = QtGui.QIcon(pixmap)
+                self.setTabIcon(i, icon)
+            except:
+                self.setTabIcon(i, QtGui.QIcon("images/WebBro.png"))
+
+            self.createWebList(link)
 
         def loadProgress(set):
             self.this.progr.setValue(set)
             self.this.progr.setVisible(True)
+
         def loadProgressEnd(set):
             if set == True:
                 self.this.progr.setVisible(False)
@@ -169,6 +193,25 @@ class Tabb(QtGui.QTabWidget):
         def indexChanged(ind):
             tex = self.tabText(ind)
             self.this.setWindowTitle(tex)
+
+        def historyEngineViev():
+            for j in range(self.this.hbox.count()):              #Ot4istka musora
+                self.this.hbox.itemAt(j).widget().deleteLater()
+
+            tablHistor = QtGui.QTableWidget(len(self.webHistoryListt), 1)
+            header = tablHistor.horizontalHeader()
+            header.setStretchLastSection(True)
+
+            tablHistor.setHorizontalHeaderLabels("   Url   ;")
+            self.this.hbox.addWidget(tablHistor)
+            tablHistor.verticalHeader().hide()
+
+            i = 0
+            for j in self.webHistoryListt:
+                tablHistor.setItem(i, 0, QtGui.QTableWidgetItem(j))
+                i += 1
+            tablHistor.itemDoubleClicked.connect(lambda item: self.addTab(item.text()))
+            self.this.modHistorWindow.show()
 
         web.titleChanged.connect(lambda title: titleChangedd(title))
         QtCore.QObject.connect(web, QtCore.SIGNAL("linkClicked (const QUrl&)"), linkChanged)
@@ -182,6 +225,24 @@ class Tabb(QtGui.QTabWidget):
         QtCore.QObject.connect(but, QtCore.SIGNAL("clicked()"), next)
         QtCore.QObject.connect(texT, QtCore.SIGNAL("returnPressed()"), urlChanged)
         self.currentChanged.connect(lambda ind: indexChanged(ind))
+        self.this.history.triggered.connect(lambda: historyEngineViev())
+
+    def createWebList(self, item):
+        """
+        Вместо истории вебкита(концепция программы не позволяет))
+        """
+        nesovpad = True
+        if len(self.webHistoryListt) == 0:
+            self.webHistoryListt.append(item)
+            nesovpad = False
+        else:
+            for i in self.webHistoryListt:
+                if i == item:
+                    nesovpad = False
+                    break
+        if nesovpad:
+            self.webHistoryListt.append(item)
+        print("self.webHistoryListt = ", self.webHistoryListt)
 
 class WebView(QtWebKit.QWebView):
     def __init__(self, url, parent=None):
