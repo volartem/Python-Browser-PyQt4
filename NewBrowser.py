@@ -73,7 +73,7 @@ class MainWindow(QtGui.QMainWindow):
         mod_window.show()
 
     def clicks(self, url):
-        self.widgett.addTab(url)
+        self.widgett.addTabb(url)
 
 class Tabb(QtGui.QTabWidget):
     def __init__(self, this, url, parent=None):
@@ -81,7 +81,7 @@ class Tabb(QtGui.QTabWidget):
         self.this = this
         self.setIconSize(QtCore.QSize(16, 16))
         self.webHistoryListt = []
-        self.addTab(url)
+        self.addTabb(url)
         # self.addPlusButton()
         self.tabCloseRequested.connect(self.closeTab)
 
@@ -92,9 +92,9 @@ class Tabb(QtGui.QTabWidget):
         font.setBold(True)
         self.tabButton.setFont(font)
         self.setCornerWidget(self.tabButton)
-        self.tabButton.clicked.connect(self.addTab)
+        self.tabButton.clicked.connect(lambda: self.addTabb())
 
-    def addTab(self,  urll="start.html"):
+    def addTabb(self,  urll="start.html"):
         input_tab = QtGui.QWidget()
         super().addTab(input_tab, " ")
 
@@ -195,7 +195,7 @@ class Tabb(QtGui.QTabWidget):
             self.this.setWindowTitle(tex)
 
         def historyEngineViev():
-            for j in range(self.this.hbox.count()):              #Ot4istka musora
+            for j in range(self.this.hbox.count()):
                 self.this.hbox.itemAt(j).widget().deleteLater()
 
             tablHistor = QtGui.QTableWidget(len(self.webHistoryListt), 1)
@@ -210,15 +210,14 @@ class Tabb(QtGui.QTabWidget):
             for j in self.webHistoryListt:
                 tablHistor.setItem(i, 0, QtGui.QTableWidgetItem(j))
                 i += 1
-            tablHistor.itemDoubleClicked.connect(lambda item: self.addTab(item.text()))
+            tablHistor.itemDoubleClicked.connect(lambda item: self.addTabb(item.text()))
             self.this.modHistorWindow.show()
 
         web.titleChanged.connect(lambda title: titleChangedd(title))
-        QtCore.QObject.connect(web, QtCore.SIGNAL("linkClicked (const QUrl&)"), linkChanged)
         QtCore.QObject.connect(web, QtCore.SIGNAL("urlChanged (const QUrl&)"), linkChanged)
         QtCore.QObject.connect(web, QtCore.SIGNAL("loadProgress(int)"), loadProgress)
         QtCore.QObject.connect(web, QtCore.SIGNAL("loadFinished(bool)"), loadProgressEnd)
-        but4.clicked.connect(lambda : self.addTab())
+        but4.clicked.connect(lambda : self.addTabb())
         web.page().linkHovered.connect(statusChanged)
         QtCore.QObject.connect(but2, QtCore.SIGNAL("clicked()"), back)
         QtCore.QObject.connect(but3, QtCore.SIGNAL("clicked()"), reload)
@@ -228,9 +227,6 @@ class Tabb(QtGui.QTabWidget):
         self.this.history.triggered.connect(lambda: historyEngineViev())
 
     def createWebList(self, item):
-        """
-        Вместо истории вебкита(концепция программы не позволяет))
-        """
         nesovpad = True
         if len(self.webHistoryListt) == 0:
             self.webHistoryListt.append(item)
@@ -242,7 +238,6 @@ class Tabb(QtGui.QTabWidget):
                     break
         if nesovpad:
             self.webHistoryListt.append(item)
-        print("self.webHistoryListt = ", self.webHistoryListt)
 
 class WebView(QtWebKit.QWebView):
     def __init__(self, url, parent=None):
@@ -250,11 +245,13 @@ class WebView(QtWebKit.QWebView):
         self.load(QtCore.QUrl(url))
         self.newTabAction = QtGui.QAction('Open Link in New Tab', self)
         self.newTabAction.triggered.connect(self.createNewTab)
+        self.settings().globalSettings().setAttribute(QtWebKit.QWebSettings.LocalStorageEnabled, True)
+        self.settings().setLocalStoragePath("/home/Python Browser/Storage/")
 
     def createNewTab(self):
         this = self.parent().parent().parent()
         url = self.newTabAction.data()
-        this.addTab( url)
+        this.addTabb(url)
 
     def contextMenuEvent(self, event):
         menu = self.page().createStandardContextMenu()
